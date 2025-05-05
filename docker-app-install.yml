@@ -1,0 +1,82 @@
+---
+- name: Install Docker dev tools
+  hosts: app
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Install dependencies
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg-agent
+          - software-properties-common
+        state: present
+        update_cache: true
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Add GPG key for Ubuntu/Debian VM(s)
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Add Docker repository to apt for Ubuntu/Debian VM(s)
+      ansible.builtin.apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu {{ ansible_facts.distribution_release }} stable
+        state: present
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Install Docker on Ubuntu/Debian VM(s)
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Add Docker CE repo
+      ansible.builtin.yum_repository:
+        name: docker
+        description: Docker CE repo
+        baseurl: https://download.docker.com/linux/centos/$releasever/$basearch/stable
+        gpgcheck: true
+        gpgkey: https://download.docker.com/linux/centos/gpg
+        state: present
+      when: ansible_facts['os_family'] == "RedHat"
+
+    - name: Install Docker on CenOS/RedHat VM(s)
+      ansible.builtin.dnf:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        enablerepo: https://download.docker.com/linux/centos/$releasever/$basearch/stable
+        state: present
+        update_cache: true
+      when: ansible_facts['os_family'] == "RedHat"
+
+    - name: Start Docker
+      ansible.builtin.systemd_service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create Docker group
+      ansible.builtin.group:
+        name: docker
+        state: present
+
+    - name: Add Ansible user to docker group
+      ansible.builtin.user:
+        name: "{{ ansible_user_id }}"
+        groups: docker
+        append: true

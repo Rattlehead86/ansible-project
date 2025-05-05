@@ -1,0 +1,47 @@
+---
+- name: Create Acme service user on VM1
+  hosts: vm1
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Create Acme user on VM1
+      ansible.builtin.user:
+        name: acme
+        generate_ssh_key: true
+        ssh_key_type: ed25519
+        ssh_key_file: "/home/acme/.ssh/id_ed25519"
+        state: present
+
+- name: Create Acme service user on VM2/VM3
+  hosts:
+    - vm2
+    - vm3
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Create Acme user on VM2/VM3
+      ansible.builtin.user:
+        name: acme
+        state: present
+
+    - name: Create Acme user .ssh directory
+      ansible.builtin.file:
+        path: /home/acme/.ssh
+        state: directory
+        owner: acme
+        mode: "0700"
+
+    - name: Copy SSH key from VM1 into memory
+      ansible.builtin.slurp:
+        src: /home/acme/.ssh/id_ed25519.pub
+      register: slurped_key_file
+      delegate_to: 127.0.0.1
+
+    - name: Paste SSH key from memory to VM2/VM3
+      ansible.builtin.copy:
+        content: "{{ slurped_key_file['content'] | b64decode }}"
+        dest: /home/acme/.ssh/authorized_keys
+        owner: test
+        mode: "0600"

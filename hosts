@@ -1,0 +1,13 @@
+[app]
+vm2 ansible_host=10.0.0.5
+vm3 ansible_host=10.0.0.12
+
+[web]
+vm1 ansible_host=10.0.0.28
+
+[database]
+vm1 ansible_host=10.0.0.28
+
+[database:vars]
+postgresql_version=16
+postgresql_data_directory=/var/lib/pgsql
